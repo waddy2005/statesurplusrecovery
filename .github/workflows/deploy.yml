@@ -41,7 +41,37 @@ jobs:
           ls -la dist/
 
       - name: Install lftp
-        run: sudo apt-get update -y && sudo apt-get install -y lftp
+        run: sudo apt-get update -y && sudo apt-get install -y lftp netcat-openbsd dnsutils
+
+      - name: Diagnose SFTP connectivity
+        env:
+          SFTP_SERVER: ${{ secrets.FTP_SERVER }}
+          SFTP_PORT: ${{ vars.FTP_PORT || '18765' }}
+        run: |
+          echo "=== DNS resolution ==="
+          if getent hosts "$SFTP_SERVER" >/dev/null; then
+            echo "✅ DNS resolves"
+          else
+            echo "❌ DNS FAILS — FTP_SERVER secret value is invalid or domain doesn't resolve"
+            exit 0
+          fi
+          echo ""
+          echo "=== Port $SFTP_PORT (configured) ==="
+          if timeout 10 bash -c "</dev/tcp/$SFTP_SERVER/$SFTP_PORT" 2>/dev/null; then
+            echo "✅ Port $SFTP_PORT is reachable"
+          else
+            echo "❌ Port $SFTP_PORT is unreachable"
+          fi
+          echo ""
+          echo "=== Port 22 (standard SSH fallback) ==="
+          if timeout 10 bash -c "</dev/tcp/$SFTP_SERVER/22" 2>/dev/null; then
+            echo "✅ Port 22 is reachable — try setting FTP_PORT variable to 22"
+          else
+            echo "❌ Port 22 is unreachable"
+          fi
+          echo ""
+          echo "=== SSH banner check on $SFTP_PORT ==="
+          (echo "" | timeout 10 nc -w 5 "$SFTP_SERVER" "$SFTP_PORT" 2>&1 | head -1) || echo "No banner received"
 
       - name: Deploy to SiteGround via SFTP
         env:
