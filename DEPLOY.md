@@ -27,15 +27,17 @@ git remote add origin https://github.com/<your-username>/state-surplus-recovery.
 git push -u origin main
 ```
 
-### 2. Get your SiteGround FTP credentials
+### 2. Get your SiteGround SFTP credentials
+
+**Important: SiteGround only supports SFTP (not plain FTP or FTPS).** SFTP runs over SSH on port `18765` by default.
 
 1. Log into **SiteGround Site Tools**.
-2. Go to **Site → FTP Accounts**.
-3. Create a new FTP account (or use an existing one). Note down:
-   - **Server / Hostname** — usually something like `ftp.statesurplusrecovery.com` or an IP.
+2. Go to **Site → FTP Accounts** (the "FTP" name is misleading — these accounts work over SFTP).
+3. Create a new account (or use an existing one). Note down:
+   - **Server / Hostname** — usually `your-domain.com` or the server IP shown in Site Tools.
    - **Username** — typically `username@yourdomain.com`.
    - **Password** — the one you set when creating the account.
-   - **Port** — usually `21` for FTP or `21` for FTPS (explicit). Use FTPS.
+   - **Port** — `18765` (SiteGround SFTP), not 21.
 
 ### 3. Add secrets and variables to GitHub
 
@@ -53,9 +55,8 @@ Under **Variables**, add (optional, defaults are sensible):
 
 | Name              | Default        | Notes                                                       |
 | ----------------- | -------------- | ----------------------------------------------------------- |
-| `FTP_SERVER_DIR`  | `/public_html/` | Where files land. Trailing slash required.                  |
-| `FTP_PROTOCOL`    | `ftps`         | Keep `ftps` for SiteGround. Use `ftp` only if FTPS is off.  |
-| `FTP_PORT`        | `21`           | Standard FTP port. SiteGround uses 21 for FTPS as well.     |
+| `FTP_SERVER_DIR`  | `/public_html/` | Where files land on the server. Trailing slash required.   |
+| `FTP_PORT`        | `18765`        | SiteGround SFTP port. Override only if your host differs.   |
 
 ### 4. Trigger the first deploy
 

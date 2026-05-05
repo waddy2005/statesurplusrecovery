@@ -40,23 +40,30 @@ jobs:
           test -d dist/assets
           ls -la dist/
 
-      - name: Deploy to SiteGround via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          port: ${{ vars.FTP_PORT || 21 }}
-          protocol: ${{ vars.FTP_PROTOCOL || 'ftps' }}
-          local-dir: ./dist/
-          server-dir: ${{ vars.FTP_SERVER_DIR || '/public_html/' }}
-          dangerous-clean-slate: false
-          log-level: standard
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/node_modules/**
-            **/.DS_Store
+      - name: Install lftp
+        run: sudo apt-get update -y && sudo apt-get install -y lftp
+
+      - name: Deploy to SiteGround via SFTP
+        env:
+          SFTP_SERVER: ${{ secrets.FTP_SERVER }}
+          SFTP_USER: ${{ secrets.FTP_USERNAME }}
+          SFTP_PASS: ${{ secrets.FTP_PASSWORD }}
+          SFTP_PORT: ${{ vars.FTP_PORT || '18765' }}
+          SFTP_DIR: ${{ vars.FTP_SERVER_DIR || '/public_html/' }}
+        run: |
+          set -e
+          echo "Connecting to $SFTP_SERVER on port $SFTP_PORT..."
+          lftp -c "
+            set sftp:auto-confirm yes;
+            set net:max-retries 3;
+            set net:reconnect-interval-base 5;
+            set net:timeout 30;
+            set mirror:use-pget-n 4;
+            open -p $SFTP_PORT -u '$SFTP_USER','$SFTP_PASS' sftp://$SFTP_SERVER;
+            mirror --reverse --verbose --parallel=4 --no-perms --exclude '\\.git.*' --exclude 'node_modules/' ./dist/ '$SFTP_DIR';
+            bye;
+          "
+          echo "✅ Upload complete"
 
       - name: Deployment summary
         if: success()
